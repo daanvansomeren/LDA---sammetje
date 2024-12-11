@@ -5,8 +5,8 @@ import os
 import pandas as pd
 
 # HANDMATIGE DATASETS
-'''
-Datasets
+
+#Datasets
 nulmeting = [
     [1348.54, 2128.13, 2866.26, 3468.28, 3982.77, 4358.45, 4742.03, 4910.19, 5104.66, 
      5119.41, 4967.07, 4780.89, 4627.36, 4275.79, 3906.08, 3180.87, 2410.09, 1919.25], 
@@ -60,7 +60,7 @@ prom_15 = [
     [-9, -8.5, -8, -7.5, -7]
 ]
 
-datasets = {
+hand_datasets = {
     "Nulmeting": nulmeting,
     "Prom 0.01% PEO": prom_01,
     "Prom 0.1% PEO": prom_1,
@@ -72,7 +72,7 @@ datasets = {
     "Prom 1.5% PEO": prom_15,
 }
 
-colors = {
+hand_colors = {
     "Nulmeting": "orange",
     "Prom 0.01% PEO": "grey",
     "Prom 0.1% PEO": "green",
@@ -83,12 +83,13 @@ colors = {
     "Prom 1% PEO (3)": "cyan",
     "Prom 1.5% PEO": "blue",
 }
-'''
+
 # HANDMATIGE DATASETS
 
 
+
 def df_read(meting_nummer, promille):
-    directory = r'C:\Users\daanv\Documents\UVA\LDA - sammetje\csv_parameters'
+    directory = r'C:\documenten computer\huiswerkcomputer\Natuur en sterrenkunde jaar 2\project natuur en sterrenkunde 2\ECPC\LDA---sammetje\csv_parameters'
     input_file = os.path.join(directory, f"{meting_nummer}para_{promille}.csv")
     df = pd.read_csv(input_file)
     amplitude = df.iloc[:, -3].tolist()  
@@ -97,14 +98,19 @@ def df_read(meting_nummer, promille):
     return amplitude, mu, sigma
 
 prom_15 = [
-    df_read(1, 15)[1], 
-    [-9 + i for i in range(len(df_read(1, 15)[1]))]
+    df_read(1, 15)[1], # freq
+    [-9 + i for i in range(len(df_read(1, 15)[1]))], # r
+    df_read(1, "15")[2], # sigma
 ]
 
 prom_25_2 = [
-    df_read(2, "25")[1], 
-    [-9 + i for i in range(len(df_read(2, "25")[1]))]
+    df_read(2, "25")[1], # freq
+    [-9 + i for i in range(len(df_read(2, "25")[1]))], # r
+    df_read(2, "25")[2] # sigma
 ]
+
+print(len(prom_25_2[0]))
+print(len(prom_25_2[2]))
 
 datasets = {
     "Prom 1.5% PEO": prom_15,
@@ -149,14 +155,125 @@ def process_and_fit_shifted(dataset, label, color):
 
 # Main execution for shifting and plotting
 plt.figure(figsize=(12, 8))
-for label, dataset in datasets.items():
-    process_and_fit_shifted(dataset, label, colors[label])
+for label, dataset in hand_datasets.items():
+    process_and_fit_shifted(dataset, label, hand_colors[label])
 
 plt.xlabel('r (shifted)')
 plt.ylabel('metingen')
-plt.title('Quadratic Fits with Peaks Aligned at r=0')
+plt.title('Quadratic Fits with Peaks Aligned at r=0 - without errorbars')
 plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
 plt.grid()
 plt.tight_layout()
 plt.show()
 
+def process_and_fit_shifted_with_errorbars(dataset, label, color):
+    metingen = dataset[0]
+    r = dataset[1]
+    sigma = dataset[2]
+    # Fit the model
+    model = models.Model(snelheid_functie)
+    result = model.fit(metingen, x=r, a=0, b=np.mean(metingen), x0=0)
+
+    # Extract fitting parameters
+    a = result.params['a'].value
+    b = result.params['b'].value
+    x0 = result.params['x0'].value
+
+    # Calculate the shift to align the peak (x0) to zero
+    shift = -x0
+    r_shifted = [val + shift for val in r]
+
+    # Generate the shifted fit
+    r_fine_shifted = np.linspace(min(r_shifted), max(r_shifted), 200)
+    y_fit_shifted = snelheid_functie(r_fine_shifted, a, b, 0)  # x0 is zero after shifting
+
+    # Plot shifted data with error bars
+
+    plt.errorbar(r_shifted, metingen, yerr=sigma, fmt='o', label=f"{label} Data (Shifted)", color=color, alpha=0.6)
+    plt.plot(r_fine_shifted, y_fit_shifted, '-', label=f"{label} Fit (Shifted)", color=color)
+
+plt.figure(figsize=(12, 8))
+for label, dataset in datasets.items():
+    process_and_fit_shifted_with_errorbars(dataset, label, colors[label])
+
+plt.xlabel('r (shifted)')
+plt.ylabel('metingen')
+plt.title('Quadratic Fits with Peaks Aligned at r=0 - with errorbars')
+plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+
+peo_concentration_maxima = []
+
+def process_and_fit_shifted_and_extract_peak(dataset, label, color, concentration):
+    metingen = dataset[0]
+    r = dataset[1]
+
+    # Fit the model
+    model = models.Model(snelheid_functie)
+    result = model.fit(metingen, x=r, a=0, b=np.mean(metingen), x0=0)
+
+    # Extract fitting parameters
+    a = result.params['a'].value
+    b = result.params['b'].value
+    x0 = result.params['x0'].value
+
+    # Calculate the shift to align the peak (x0) to zero
+    shift = -x0
+    r_shifted = [val + shift for val in r]
+
+    # Generate the shifted fit
+    r_fine_shifted = np.linspace(min(r_shifted), max(r_shifted), 200)
+    y_fit_shifted = snelheid_functie(r_fine_shifted, a, b, 0)  # x0 is zero after shifting
+
+    # Plot shifted data and fit
+    plt.plot(r_shifted, metingen, 'o', label=f"{label} Data (Shifted)", color=color, alpha=0.6)
+    plt.plot(r_fine_shifted, y_fit_shifted, '-', label=f"{label} Fit (Shifted)", color=color)
+
+    # Store the maximum value of the fit and the corresponding concentration
+    max_fit_value = max(y_fit_shifted)
+    peo_concentration_maxima.append((concentration, max_fit_value))
+
+
+# Define PEO concentrations for datasets
+hand_datasets_concentrations = {
+    "Nulmeting": 0,
+    "Prom 0.01% PEO": 0.01,
+    "Prom 0.1% PEO": 0.1,
+    "Prom 0.5% PEO (1)": 0.5,
+    "Prom 0.5% PEO (2)": 0.5,
+    "Prom 1% PEO (1)": 1.0,
+    "Prom 1% PEO (2)": 1.0,
+    "Prom 1% PEO (3)": 1.0,
+    "Prom 1.5% PEO": 1.5,
+}
+
+# Main execution for shifting, extracting peak, and plotting
+plt.figure(figsize=(12, 8))
+for label, dataset in hand_datasets.items():
+    concentration = hand_datasets_concentrations[label]
+    process_and_fit_shifted_and_extract_peak(dataset, label, hand_colors[label], concentration)
+
+plt.xlabel('r (shifted)')
+plt.ylabel('metingen')
+plt.title('Quadratic Fits with Peaks Aligned at r=0 - Peak Extraction')
+plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+# Plot the maximum values against PEO concentrations
+peo_concentration_maxima.sort()  # Sort by concentration
+concentrations, maxima = zip(*peo_concentration_maxima)
+print(maxima)
+plt.figure(figsize=(8, 6))
+plt.plot(concentrations, maxima, 'o-', color='blue', label='Peak Values')
+plt.xlabel('PEO Concentration (%)')
+plt.ylabel('Peak Value')
+plt.title('Peak Values vs. PEO Concentration')
+plt.grid()
+plt.legend()
+plt.tight_layout()
+plt.show()
