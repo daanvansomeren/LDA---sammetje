@@ -87,6 +87,7 @@ colors = {
 # HANDMATIGE DATASETS
 
 
+
 def df_read(meting_nummer, promille):
     directory = r'C:\Users\daanv\Documents\UVA\LDA - sammetje\csv_parameters'
     input_file = os.path.join(directory, f"{meting_nummer}para_{promille}.csv")
@@ -116,15 +117,40 @@ colors = {
     "Prom 2.5% PEO": "pink"
 }
 
+def fouten_prop(frequentie, sigma):
+    golflengte = 632.8e-3
+    hoek = 4.618  * np.pi / 180
+    fout_hoek = 0.219
+    form = ((((- golflengte * frequentie * fout_hoek) / (4 * (np.cos(hoek) ** 2))) ** 2) + ((golflengte * sigma) / (2 * np.sin(hoek))) ** 2)
+    return np.sqrt(form)
 
-# Quadratic function definition
-def snelheid_functie(x, a, b, x0):
+
+def quadratisch_functie(x, a, b, x0):
     return a * (x - x0) ** 2 + b
 
-# Function to process, fit, shift peaks, and plot
-def process_and_fit_shifted(dataset, label, color):
+def gauss(x, H, A, x0, sigma): 
+    return H + A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
+
+def v_functie(frequentie):
+    form = (632.8e-3 * frequentie) / (2 * np.sin(4.618 * np.pi / 180))
+    return form
+
+def process_and_fit_shifted_with_errorbars(dataset, label, color, fit_functie):
     metingen = dataset[0]
     r = dataset[1]
+    fout_lijst = []
+    snelheid = []
+    if len(dataset) > 2:
+        sigma_csv = dataset[2]  
+        for pos in range (len(metingen)):
+            fout_lijst.append(fouten_prop(metingen[pos], sigma_csv[pos]))
+            snelheid.append(v_functie(metingen[pos]))
+    else:
+        sigma_csv = None 
+        for pos in range (len(metingen)):
+            snelheid.append(v_functie(metingen[pos]))
+    
+    
 
     # Fit the model
     model = models.Model(snelheid_functie)
@@ -149,14 +175,53 @@ def process_and_fit_shifted(dataset, label, color):
 
 # Main execution for shifting and plotting
 plt.figure(figsize=(12, 8))
-for label, dataset in datasets.items():
-    process_and_fit_shifted(dataset, label, colors[label])
+for label, dataset in hand_datasets.items():
+    process_and_fit_shifted(dataset, label, hand_colors[label])
 
 plt.xlabel('r (shifted)')
 plt.ylabel('metingen')
-plt.title('Quadratic Fits with Peaks Aligned at r=0')
+plt.title('Quadratic Fits with Peaks Aligned at r=0 - without errorbars')
 plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
 plt.grid()
 plt.tight_layout()
 plt.show()
+
+def process_and_fit_shifted_with_errorbars(dataset, label, color):
+    metingen = dataset[0]
+    r = dataset[1]
+    sigma = dataset[2]
+    # Fit the model
+    model = models.Model(snelheid_functie)
+    result = model.fit(metingen, x=r, a=0, b=np.mean(metingen), x0=0)
+
+    # Extract fitting parameters
+    a = result.params['a'].value
+    b = result.params['b'].value
+    x0 = result.params['x0'].value
+
+    # Calculate the shift to align the peak (x0) to zero
+    shift = -x0
+    r_shifted = [val + shift for val in r]
+
+    # Generate the shifted fit
+    r_fine_shifted = np.linspace(min(r_shifted), max(r_shifted), 200)
+    y_fit_shifted = snelheid_functie(r_fine_shifted, a, b, 0)  # x0 is zero after shifting
+
+    # Plot shifted data with error bars
+
+    plt.errorbar(r_shifted, metingen, yerr=sigma, fmt='o', label=f"{label} Data (Shifted)", color=color, alpha=0.6)
+    plt.plot(r_fine_shifted, y_fit_shifted, '-', label=f"{label} Fit (Shifted)", color=color)
+
+plt.figure(figsize=(12, 8))
+for label, dataset in datasets.items():
+    process_and_fit_shifted_with_errorbars(dataset, label, colors[label])
+
+plt.xlabel('r (shifted)')
+plt.ylabel('metingen')
+plt.title('Quadratic Fits with Peaks Aligned at r=0 - with errorbars')
+plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+plt.grid()
+plt.tight_layout()
+plt.show()
+
 
