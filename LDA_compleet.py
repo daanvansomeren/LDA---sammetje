@@ -51,8 +51,8 @@ prom_10_3 = [
 ]
 
 prom_01 = [
-    [520.20, 525.09, 450.33, 533.52, 1173.05, 1847.92, 2807.57, 3522.97, 4108.93, 4582.90, 4837.12,  5043.80, 5085.97, 5087.94, 4880.10, 4691.22, 4433.57, 4057.20, 3617.93, 2325.12, 1761.70, 1316.02, 653.14],
-    [-9.25, -8.75, -8.25, -7.75, -7.25, -6.75, -5.75, -4.75, -3.75, -2.75, -1.75, -0.75, 0.25, 1.25, 2.25, 3.25, 4.25, 5.25, 6.25, 7.25, 8.25, 8.75, 9.25]
+    [1173.05, 1847.92, 2807.57, 3522.97, 4108.93, 4582.90, 4837.12,  5043.80, 5085.97, 5087.94, 4880.10, 4691.22, 4433.57, 4057.20, 3617.93, 2325.12, 1761.70, 1316.02],
+    [-8.25, -7.75, -7.25, -6.75, -5.75, -4.75, -3.75, -2.75, -1.75, -0.75, 0.25, 1.25, 2.25, 3.25, 4.25, 5.25, 6.25, 7.25]
 ]
 
 prom_15 = [
@@ -61,27 +61,27 @@ prom_15 = [
 ]
 
 hand_datasets = {
-    "Nulmeting": nulmeting,
-    "Prom 0.01% PEO": prom_01,
-    "Prom 0.1% PEO": prom_1,
-    "Prom 0.5% PEO (1)": prom_5_1,
-    "Prom 0.5% PEO (2)": prom_5_2,
-    "Prom 1% PEO (1)": prom_10_1,
-    "Prom 1% PEO (2)": prom_10_2,
-    "Prom 1% PEO (3)": prom_10_3,
-    "Prom 1.5% PEO": prom_15,
+    "Nulmeting - 0‰ PEO": nulmeting,
+    "0.01‰ PEO": prom_01,
+    "0.1‰ PEO": prom_1,
+    "0.5‰ PEO (1)": prom_5_1,
+    "0.5‰ PEO (2)": prom_5_2,
+    "1‰ PEO (1)": prom_10_1,
+    "1‰ PEO (2)": prom_10_2,
+    "1‰ PEO (3)": prom_10_3,
+    "1.5‰ PEO": prom_15,
 }
 
 hand_colors = {
-    "Nulmeting": "orange",
-    "Prom 0.01% PEO": "grey",
-    "Prom 0.1% PEO": "green",
-    "Prom 0.5% PEO (1)": "red",
-    "Prom 0.5% PEO (2)": "purple",
-    "Prom 1% PEO (1)": "magenta",
-    "Prom 1% PEO (2)": "yellow",
-    "Prom 1% PEO (3)": "cyan",
-    "Prom 1.5% PEO": "blue",
+    "Nulmeting - 0‰ PEO": "orange",
+    "0.01‰ PEO": "grey",
+    "0.1‰ PEO": "green",
+    "0.5‰ PEO (1)": "red",
+    "0.5‰ PEO (2)": "purple",
+    "1‰ PEO (1)": "magenta",
+    "1‰ PEO (2)": "yellow",
+    "1‰ PEO (3)": "cyan",
+    "1.5‰ PEO": "blue",
 }
 
 # HANDMATIGE DATASETS
@@ -108,13 +108,13 @@ prom_25_2 = [
 ]
 
 datasets = {
-    "Prom 1.5% PEO": prom_15,
-    "Prom 2.5% PEO": prom_25_2
+    "1.5%. PEO": prom_15,
+    "2.5%. PEO": prom_25_2
 }
 
 colors = {
-    "Prom 1.5% PEO": "black",
-    "Prom 2.5% PEO": "pink"
+    "1.5%. PEO": "black",
+    "2.5%. PEO": "pink"
 }
 
 def fouten_prop(frequentie, sigma):
@@ -181,24 +181,26 @@ def process_and_fit_shifted_with_errorbars(dataset, label, color, fit_functie):
 
     # Plot shifted data with error bars
     if sigma_csv is not None:
-        plt.errorbar(r_shifted, snelheid, yerr=sigma_csv, fmt='o', label=f"{label} Data (Shifted)", color=color, alpha=0.6)
+        plt.errorbar(r_shifted, snelheid, yerr=sigma_csv, fmt='o', label=f"{label} Meting", color=color, alpha=0.6)
     else:
-        plt.plot(r_shifted, snelheid, 'o', label=f"{label} Data (Shifted)", color=color, alpha=0.6)
-    plt.plot(r_fine_shifted, y_fit_shifted, '-', label=f"{label} Fit (Shifted)", color=color)
+        plt.plot(r_shifted, snelheid, 'o', label=f"{label} Meting", color=color, alpha=0.6)
+    plt.plot(r_fine_shifted, y_fit_shifted, '-', label=f"{label} Fit", color=color)
 
 
-def plot(datasets, colors, functie):
+def plot(datasets_, colors, functie):
     plt.figure(figsize=(12, 8))
-    for label, dataset in datasets.items():
+    for label, dataset in datasets_.items():
         process_and_fit_shifted_with_errorbars(dataset, label, colors[label], functie)
 
     plt.xlabel('afstand verwijderd van midden buis (mm)')
     plt.ylabel('snelheid water (mm/s)')
-    if datasets == hand_datasets:
+    if datasets_ == hand_datasets:
         with_or_without = "met errorbars"
-        functie_naam = "gaussische"
-    if datasets == datasets:
+    if datasets_ == datasets:
         with_or_without = "- zonder errorbars"
+    if functie == gauss:
+        functie_naam = "gaussische"
+    if functie == quadratisch_functie:
         functie_naam = "quadratische"
     plt.title(f'Snelheid water door buis, gemeten met LDA-opstelling - gefit aan de hand van een {functie_naam} functie {with_or_without}')
     plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
