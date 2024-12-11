@@ -86,8 +86,6 @@ hand_colors = {
 
 # HANDMATIGE DATASETS
 
-
-
 def df_read(meting_nummer, promille):
     directory = r'C:\Users\daanv\Documents\UVA\LDA - sammetje\csv_parameters'
     input_file = os.path.join(directory, f"{meting_nummer}para_{promille}.csv")
@@ -123,18 +121,44 @@ colors = {
 }
 
 
+def fouten_prop(frequentie, sigma):
+    golflengte = 632.8e-9
+    hoek = 4.618  * np.pi / 180
+    fout_hoek = 0.219
+    form = ((((- golflengte * frequentie * sigma) / (4 * (np.cos(hoek) ** 2))) ** 2) + ((golflengte * fout_hoek) / (2 * np.sin(hoek))) ** 2)
+    return np.sqrt(form)
+
+
 # Quadratic function definition
-def snelheid_functie(x, a, b, x0):
+def fit_functie(x, a, b, x0):
     return a * (x - x0) ** 2 + b
 
-# Function to process, fit, shift peaks, and plot
-def process_and_fit_shifted(dataset, label, color):
+def v_functie(frequentie):
+    form = (632.8e-9 * frequentie) / (2 * np.sin(4.618 * np.pi / 180))
+    return form
+
+
+
+def process_and_fit_shifted_with_errorbars(dataset, label, color):
     metingen = dataset[0]
     r = dataset[1]
+    fout_lijst = []
+    snelheid = []
+    if len(dataset) > 2:
+        sigma = dataset[2]  
+        for pos in range (len(metingen)):
+            fout_lijst.append(fouten_prop(metingen[pos], sigma[pos]))
+            snelheid.append(v_functie(metingen[pos]))
+            print(fout_lijst)
+    else:
+        sigma = None 
+    print("snelheid = ", snelheid)
+    print("fout_lijst = ", fout_lijst)
+    
 
     # Fit the model
-    model = models.Model(snelheid_functie)
-    result = model.fit(metingen, x=r, a=0, b=np.mean(metingen), x0=0)
+    model = models.Model(fit_functie)
+    result = model.fit(snelheid, x=r, a=0, b=np.mean(snelheid), x0=0)
 
     # Extract fitting parameters
     a = result.params['a'].value
@@ -147,17 +171,20 @@ def process_and_fit_shifted(dataset, label, color):
 
     # Generate the shifted fit
     r_fine_shifted = np.linspace(min(r_shifted), max(r_shifted), 200)
-    y_fit_shifted = snelheid_functie(r_fine_shifted, a, b, 0)  # x0 is zero after shifting
+    y_fit_shifted = fit_functie(r_fine_shifted, a, b, 0)  # x0 is zero after shifting
 
-    # Plot shifted data and fit
-    plt.plot(r_shifted, metingen, 'o', label=f"{label} Data (Shifted)", color=color, alpha=0.6)
+    # Plot shifted data with error bars
+    if sigma is not None:
+        plt.errorbar(r_shifted, snelheid, yerr=sigma, fmt='o', label=f"{label} Data (Shifted)", color=color, alpha=0.6)
+    else:
+        plt.plot(r_shifted, snelheid, 'o', label=f"{label} Data (Shifted)", color=color, alpha=0.6)
     plt.plot(r_fine_shifted, y_fit_shifted, '-', label=f"{label} Fit (Shifted)", color=color)
 
-# Main execution for shifting and plotting
+
+'''# Main execution for shifting and plotting
 plt.figure(figsize=(12, 8))
 for label, dataset in hand_datasets.items():
-    process_and_fit_shifted(dataset, label, hand_colors[label])
-
+    process_and_fit_shifted_with_errorbars(dataset, label, hand_colors[label])
 plt.xlabel('r (shifted)')
 plt.ylabel('metingen')
 plt.title('Quadratic Fits with Peaks Aligned at r=0 - without errorbars')
@@ -165,33 +192,7 @@ plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
 plt.grid()
 plt.tight_layout()
 plt.show()
-
-def process_and_fit_shifted_with_errorbars(dataset, label, color):
-    metingen = dataset[0]
-    r = dataset[1]
-    sigma = dataset[2]
-    # Fit the model
-    model = models.Model(snelheid_functie)
-    result = model.fit(metingen, x=r, a=0, b=np.mean(metingen), x0=0)
-
-    # Extract fitting parameters
-    a = result.params['a'].value
-    b = result.params['b'].value
-    x0 = result.params['x0'].value
-
-    # Calculate the shift to align the peak (x0) to zero
-    shift = -x0
-    r_shifted = [val + shift for val in r]
-
-    # Generate the shifted fit
-    r_fine_shifted = np.linspace(min(r_shifted), max(r_shifted), 200)
-    y_fit_shifted = snelheid_functie(r_fine_shifted, a, b, 0)  # x0 is zero after shifting
-
-    # Plot shifted data with error bars
-
-    plt.errorbar(r_shifted, metingen, yerr=sigma, fmt='o', label=f"{label} Data (Shifted)", color=color, alpha=0.6)
-    plt.plot(r_fine_shifted, y_fit_shifted, '-', label=f"{label} Fit (Shifted)", color=color)
-
+'''
 plt.figure(figsize=(12, 8))
 for label, dataset in datasets.items():
     process_and_fit_shifted_with_errorbars(dataset, label, colors[label])
