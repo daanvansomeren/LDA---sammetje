@@ -107,9 +107,6 @@ prom_25_2 = [
     df_read(2, "25")[2] # sigma
 ]
 
-print(len(prom_25_2[0]))
-print(len(prom_25_2[2]))
-
 datasets = {
     "Prom 1.5% PEO": prom_15,
     "Prom 2.5% PEO": prom_25_2
@@ -120,50 +117,55 @@ colors = {
     "Prom 2.5% PEO": "pink"
 }
 
-
 def fouten_prop(frequentie, sigma):
-    golflengte = 632.8e-9
+    golflengte = 632.8e-3
     hoek = 4.618  * np.pi / 180
     fout_hoek = 0.219
-    form = ((((- golflengte * frequentie * sigma) / (4 * (np.cos(hoek) ** 2))) ** 2) + ((golflengte * fout_hoek) / (2 * np.sin(hoek))) ** 2)
+    form = ((((- golflengte * frequentie * fout_hoek) / (4 * (np.cos(hoek) ** 2))) ** 2) + ((golflengte * sigma) / (2 * np.sin(hoek))) ** 2)
     return np.sqrt(form)
 
 
-# Quadratic function definition
-def fit_functie(x, a, b, x0):
+def quadratisch_functie(x, a, b, x0):
     return a * (x - x0) ** 2 + b
 
+def gauss(x, H, A, x0, sigma): 
+    return H + A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
+
 def v_functie(frequentie):
-    form = (632.8e-9 * frequentie) / (2 * np.sin(4.618 * np.pi / 180))
+    form = (632.8e-3 * frequentie) / (2 * np.sin(4.618 * np.pi / 180))
     return form
 
-
-
-def process_and_fit_shifted_with_errorbars(dataset, label, color):
+def process_and_fit_shifted_with_errorbars(dataset, label, color, fit_functie):
     metingen = dataset[0]
     r = dataset[1]
     fout_lijst = []
     snelheid = []
     if len(dataset) > 2:
-        sigma = dataset[2]  
+        sigma_csv = dataset[2]  
         for pos in range (len(metingen)):
-            fout_lijst.append(fouten_prop(metingen[pos], sigma[pos]))
+            fout_lijst.append(fouten_prop(metingen[pos], sigma_csv[pos]))
             snelheid.append(v_functie(metingen[pos]))
-            print(fout_lijst)
     else:
-        sigma = None 
-    print("snelheid = ", snelheid)
-    print("fout_lijst = ", fout_lijst)
+        sigma_csv = None 
+        for pos in range (len(metingen)):
+            snelheid.append(v_functie(metingen[pos]))
+    
     
 
     # Fit the model
     model = models.Model(fit_functie)
-    result = model.fit(snelheid, x=r, a=0, b=np.mean(snelheid), x0=0)
-
-    # Extract fitting parameters
-    a = result.params['a'].value
-    b = result.params['b'].value
-    x0 = result.params['x0'].value
+    if fit_functie == quadratisch_functie:
+        result = model.fit(snelheid, x=r, a=0, b=np.mean(snelheid), x0=0)
+        a = result.params['a'].value
+        b = result.params['b'].value
+        x0 = result.params['x0'].value
+    
+    if fit_functie == gauss:
+        result = model.fit(snelheid, x=r, H=np.mean(snelheid), A=1, x0=0, sigma = 100)
+        H = result.params['H'].value
+        A = result.params['A'].value
+        x0 = result.params['x0'].value
+        sigma = result.params['sigma'].value
 
     # Calculate the shift to align the peak (x0) to zero
     shift = -x0
@@ -171,38 +173,37 @@ def process_and_fit_shifted_with_errorbars(dataset, label, color):
 
     # Generate the shifted fit
     r_fine_shifted = np.linspace(min(r_shifted), max(r_shifted), 200)
-    y_fit_shifted = fit_functie(r_fine_shifted, a, b, 0)  # x0 is zero after shifting
+    if fit_functie == quadratisch_functie:
+        y_fit_shifted = fit_functie(r_fine_shifted, a, b, 0)  # x0 is zero after shifting
+
+    if fit_functie == gauss:
+        y_fit_shifted = fit_functie(r_fine_shifted, H, A, 0, sigma)  # x0 is zero after shifting
 
     # Plot shifted data with error bars
-    if sigma is not None:
-        plt.errorbar(r_shifted, snelheid, yerr=sigma, fmt='o', label=f"{label} Data (Shifted)", color=color, alpha=0.6)
+    if sigma_csv is not None:
+        plt.errorbar(r_shifted, snelheid, yerr=sigma_csv, fmt='o', label=f"{label} Data (Shifted)", color=color, alpha=0.6)
     else:
         plt.plot(r_shifted, snelheid, 'o', label=f"{label} Data (Shifted)", color=color, alpha=0.6)
     plt.plot(r_fine_shifted, y_fit_shifted, '-', label=f"{label} Fit (Shifted)", color=color)
 
 
-'''# Main execution for shifting and plotting
-plt.figure(figsize=(12, 8))
-for label, dataset in hand_datasets.items():
-    process_and_fit_shifted_with_errorbars(dataset, label, hand_colors[label])
-plt.xlabel('r (shifted)')
-plt.ylabel('metingen')
-plt.title('Quadratic Fits with Peaks Aligned at r=0 - without errorbars')
-plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
-plt.grid()
-plt.tight_layout()
-plt.show()
-'''
-plt.figure(figsize=(12, 8))
-for label, dataset in datasets.items():
-    process_and_fit_shifted_with_errorbars(dataset, label, colors[label])
+def plot(datasets, colors, functie):
+    plt.figure(figsize=(12, 8))
+    for label, dataset in datasets.items():
+        process_and_fit_shifted_with_errorbars(dataset, label, colors[label], functie)
 
-plt.xlabel('r (shifted)')
-plt.ylabel('metingen')
-plt.title('Quadratic Fits with Peaks Aligned at r=0 - with errorbars')
-plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
-plt.grid()
-plt.tight_layout()
-plt.show()
+    plt.xlabel('afstand verwijderd van midden buis (mm)')
+    plt.ylabel('snelheid water (mm/s)')
+    if datasets == hand_datasets:
+        with_or_without = "met errorbars"
+        functie_naam = "gaussische"
+    if datasets == datasets:
+        with_or_without = "- zonder errorbars"
+        functie_naam = "quadratische"
+    plt.title(f'Snelheid water door buis, gemeten met LDA-opstelling - gefit aan de hand van een {functie_naam} functie {with_or_without}')
+    plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+    plt.grid()
+    plt.tight_layout()
+    plt.show()
 
-
+plot(hand_datasets, hand_colors, gauss)
