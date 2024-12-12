@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 from lmfit import models
 import os
 import pandas as pd
+from matplotlib.gridspec import GridSpec
+
+
 
 # HANDMATIGE DATASETS
 
@@ -67,8 +70,6 @@ prom_15 = [
     final_list
 ]
 
-print(len(prom_15[0]))
-
 hand_datasets = {
     "Nulmeting - 0‰ PEO": nulmeting,
     "0.01‰ PEO": prom_01,
@@ -127,12 +128,14 @@ colors = {
 }
 
 def fouten_prop(frequentie, sigma):
-    golflengte = 632.8e-3
-    hoek = 4.618  * np.pi / 180
-    fout_hoek = 0.219
-    form = ((((- golflengte * frequentie * fout_hoek) / (4 * (np.cos(hoek) ** 2))) ** 2) + ((golflengte * sigma) / (2 * np.sin(hoek))) ** 2)
+    golflengte = 632.8e-6  # Wavelength of the laser (in mm)
+    hoek = 4.618 * np.pi / 180  # Convert angle to radians
+    fout_hoek = 0.219 * np.pi / 180  # Convert angle uncertainty to radians
+    form = (
+        ((-golflengte * frequentie * fout_hoek) / (2 * (np.cos(hoek) ** 2))) ** 2
+        + ((golflengte * sigma) / (2 * np.sin(hoek))) ** 2
+    )
     return np.sqrt(form)
-
 
 def quadratisch_functie(x, a, b, x0):
     return a * (x - x0) ** 2 + b
@@ -141,26 +144,24 @@ def gauss(x, H, A, x0, sigma):
     return H + A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
 
 def v_functie(frequentie):
-    form = (632.8e-3 * frequentie) / (2 * np.sin(4.618 * np.pi / 180))
+    form = (632.8e-6 * frequentie) / (2 * np.sin(4.618 * np.pi / 180))
     return form
 
-def process_and_fit_shifted_with_errorbars(dataset, label, color, fit_functie):
+def process_and_fit_with_residuals(dataset, label, color, fit_functie, ax_fit, ax_residual):
     metingen = dataset[0]
     r = [val * 1.33 for val in dataset[1]]
     fout_lijst = []
     snelheid = []
+    
     if len(dataset) > 2:
         sigma_csv = dataset[2]  
-        for pos in range (len(metingen)):
+        for pos in range(len(metingen)):
             fout_lijst.append(fouten_prop(metingen[pos], sigma_csv[pos]))
             snelheid.append(v_functie(metingen[pos]))
     else:
-        sigma_csv = None 
-        for pos in range (len(metingen)):
+        sigma_csv = None
+        for pos in range(len(metingen)):
             snelheid.append(v_functie(metingen[pos]))
-    
-    
-
     # Fit the model
     model = models.Model(fit_functie)
     if fit_functie == quadratisch_functie:
@@ -170,51 +171,72 @@ def process_and_fit_shifted_with_errorbars(dataset, label, color, fit_functie):
         x0 = result.params['x0'].value
     
     if fit_functie == gauss:
-        result = model.fit(snelheid, x=r, H=np.mean(snelheid), A=1, x0=0, sigma = 100)
+        result = model.fit(snelheid, x=r, H=np.mean(snelheid), A=1, x0=0, sigma=100)
         H = result.params['H'].value
         A = result.params['A'].value
         x0 = result.params['x0'].value
         sigma = result.params['sigma'].value
-
+    
     # Calculate the shift to align the peak (x0) to zero
     shift = -x0
     r_shifted = [val + shift for val in r]
-
+    
     # Generate the shifted fit
     r_fine_shifted = np.linspace(min(r_shifted), max(r_shifted), 200)
     if fit_functie == quadratisch_functie:
-        y_fit_shifted = fit_functie(r_fine_shifted, a, b, 0)  # x0 is zero after shifting
-
+        y_fit_shifted = fit_functie(r_fine_shifted, a, b, 0)
     if fit_functie == gauss:
-        y_fit_shifted = fit_functie(r_fine_shifted, H, A, 0, sigma)  # x0 is zero after shifting
-
-    # Plot shifted data with error bars
+        y_fit_shifted = fit_functie(r_fine_shifted, H, A, 0, sigma)
+    
     if sigma_csv is not None:
-        plt.errorbar(r_shifted, snelheid, yerr=sigma_csv, fmt='o', label=f"{label} Meting", color=color, alpha=0.6)
+        ax_fit.errorbar(r_shifted, snelheid, yerr=fout_lijst, fmt='o', label=f"{label} Meting", color=color, alpha=0.6)
     else:
-        plt.plot(r_shifted, snelheid, 'o', label=f"{label} Meting", color=color, alpha=0.6)
-    plt.plot(r_fine_shifted, y_fit_shifted, '-', label=f"{label} Fit", color=color)
+        ax_fit.plot(r_shifted, snelheid, 'o', label=f"{label} Meting", color=color, alpha=0.6)
 
 
-def plot(datasets_, colors, functie):
-    plt.figure(figsize=(12, 8))
-    for label, dataset in datasets_.items():
-        process_and_fit_shifted_with_errorbars(dataset, label, colors[label], functie)
+    ax_fit.plot(r_fine_shifted, y_fit_shifted, '-', label=f"{label} Fit", color=color)
+    
+    # Calculate residuals
+    residuals = snelheid - result.eval(x=r)
+    ax_residual.plot(r_shifted, residuals, 'o', label=f"{label} Residuals", color=color)
+    ax_residual.axhline(0, color='black', linestyle='--', linewidth=1, alpha=0.7)
+    ax_residual.set_xlabel("Afstand (mm)")
+    ax_residual.set_ylabel("Snelheid (mm/s)")
 
-    plt.xlabel('afstand verwijderd van midden buis (mm)')
-    plt.ylabel('snelheid water (mm/s)')
-    if datasets_ == hand_datasets:
-        with_or_without = "met errorbars"
-    if datasets_ == datasets:
-        with_or_without = "- zonder errorbars"
-    if functie == gauss:
-        functie_naam = "gaussische"
-    if functie == quadratisch_functie:
-        functie_naam = "quadratische"
-    plt.title(f'Snelheid water door buis, gemeten met LDA-opstelling - gefit aan de hand van een {functie_naam} functie {with_or_without}')
-    plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
-    plt.grid()
+def plot_combined(datasets_, colors, functie):
+    num_datasets = len(datasets_)
+    num_cols = 2  # Divide residuals across two columns
+    num_rows = (num_datasets + 1) // 2  # Calculate required rows for residuals
+
+    # Create a figure and a GridSpec layout
+    fig = plt.figure(figsize=(19, 2 * num_rows))  # Adjusted figure size for better spacing
+    gs = GridSpec(num_rows, num_cols + 3, figure=fig)  # Grid with extra columns for space adjustments
+
+    # Create the shared axis for fits
+    ax_fit = fig.add_subplot(gs[:, :2])  # First subplot spans two columns
+    ax_fit.set_xlabel('Afstand verwijderd van midden buis (mm)')
+    ax_fit.set_ylabel('Snelheid water (mm/s)')
+    ax_fit.grid()
+
+    # Create residual axes
+    residual_axes = []
+    for i in range(num_datasets):
+        col = i % num_cols + 3  # Start residual plots from the third column
+        row = i // num_cols
+        ax_residual = fig.add_subplot(gs[row, col])  # Adjust for residuals in individual subplots
+        residual_axes.append(ax_residual)
+
+    # Plot data and fits
+    for i, (label, dataset) in enumerate(datasets_.items()):
+        process_and_fit_with_residuals(dataset, label, colors[label], functie, ax_fit, residual_axes[i])
+
+    # Add legends to the fits subplot
+    ax_fit.legend(loc='upper left', bbox_to_anchor=(1, 1))
+
+    # Tighten layout for better spacing
     plt.tight_layout()
     plt.show()
 
-plot(hand_datasets, hand_colors, gauss)
+
+# Plot both datasets with residuals
+plot_combined(datasets, colors, quadratisch_functie)
