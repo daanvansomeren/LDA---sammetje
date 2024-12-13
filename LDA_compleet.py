@@ -3,10 +3,13 @@ import matplotlib.pyplot as plt
 from lmfit import models
 import os
 import pandas as pd
+from matplotlib.gridspec import GridSpec
+
+
 
 # HANDMATIGE DATASETS
-'''
-Datasets
+
+#Datasets
 nulmeting = [
     [1348.54, 2128.13, 2866.26, 3468.28, 3982.77, 4358.45, 4742.03, 4910.19, 5104.66, 
      5119.41, 4967.07, 4780.89, 4627.36, 4275.79, 3906.08, 3180.87, 2410.09, 1919.25], 
@@ -51,41 +54,47 @@ prom_10_3 = [
 ]
 
 prom_01 = [
-    [520.20, 525.09, 450.33, 533.52, 1173.05, 1847.92, 2807.57, 3522.97, 4108.93, 4582.90, 4837.12,  5043.80, 5085.97, 5087.94, 4880.10, 4691.22, 4433.57, 4057.20, 3617.93, 2325.12, 1761.70, 1316.02, 653.14],
-    [-9.25, -8.75, -8.25, -7.75, -7.25, -6.75, -5.75, -4.75, -3.75, -2.75, -1.75, -0.75, 0.25, 1.25, 2.25, 3.25, 4.25, 5.25, 6.25, 7.25, 8.25, 8.75, 9.25]
+    [1173.05, 1847.92, 2807.57, 3522.97, 4108.93, 4582.90, 4837.12, 5043.80, 5085.97, 5087.94, 4880.10, 4691.22, 4433.57, 4057.20, 3617.93, 2325.12, 1761.70, 1316.02],
+    [-8.25, -7.75, -7.25, -6.75, -5.75, -4.75, -3.75, -2.75, -1.75, -0.75, 0.25, 1.25, 2.25, 3.25, 4.25, 5.25, 6.25, 7.25]
 ]
 
+
+list1 = [-9 + i * 0.5 for i in range(5)]  # 5 steps of 0.5 starting from -9
+list2 = [list1[-1] + (i + 1) * 1 for i in range(11)]  # 11 steps of 1
+list3 = [list2[-1] + (i + 1) * 0.5 for i in range(6)]  # 6 steps of 0.5
+
+# Combining all parts of the list
+final_list = list1 + list2 + list3
 prom_15 = [
-    [908.66, 1319.18, 1782.99, 2214.4, 2468.01],
-    [-9, -8.5, -8, -7.5, -7]
+    [1301.41, 1712.72, 2145.49, 2554.71, 3294.96, 3920.26, 4220.05, 4505.18, 4806.74, 5094.10, 5251.48, 5304.78, 5335.8, 5228.71, 4844.62, 4332.33, 2501.41, 2441.17, 2258.31, 2035.56, 1815.98, 1606.19],
+    final_list
 ]
 
-datasets = {
-    "Nulmeting": nulmeting,
-    "Prom 0.01% PEO": prom_01,
-    "Prom 0.1% PEO": prom_1,
-    "Prom 0.5% PEO (1)": prom_5_1,
-    "Prom 0.5% PEO (2)": prom_5_2,
-    "Prom 1% PEO (1)": prom_10_1,
-    "Prom 1% PEO (2)": prom_10_2,
-    "Prom 1% PEO (3)": prom_10_3,
-    "Prom 1.5% PEO": prom_15,
+hand_datasets = {
+    "Nulmeting - 0‰ PEO": nulmeting,
+    "0.01‰ PEO": prom_01,
+    "0.1‰ PEO": prom_1,
+    "0.5‰ PEO (1)": prom_5_1,
+    "0.5‰ PEO (2)": prom_5_2,
+    "1‰ PEO (1)": prom_10_1,
+    "1‰ PEO (2)": prom_10_2,
+    "1‰ PEO (3)": prom_10_3,
+    "1.5‰ PEO": prom_15,
 }
 
-colors = {
-    "Nulmeting": "orange",
-    "Prom 0.01% PEO": "grey",
-    "Prom 0.1% PEO": "green",
-    "Prom 0.5% PEO (1)": "red",
-    "Prom 0.5% PEO (2)": "purple",
-    "Prom 1% PEO (1)": "magenta",
-    "Prom 1% PEO (2)": "yellow",
-    "Prom 1% PEO (3)": "cyan",
-    "Prom 1.5% PEO": "blue",
+hand_colors = {
+    "Nulmeting - 0‰ PEO": "orange",
+    "0.01‰ PEO": "grey",
+    "0.1‰ PEO": "green",
+    "0.5‰ PEO (1)": "red",
+    "0.5‰ PEO (2)": "purple",
+    "1‰ PEO (1)": "magenta",
+    "1‰ PEO (2)": "yellow",
+    "1‰ PEO (3)": "cyan",
+    "1.5‰ PEO": "blue",
 }
-'''
+
 # HANDMATIGE DATASETS
-
 
 def df_read(meting_nummer, promille):
     directory = r'C:\documenten computer\huiswerkcomputer\Natuur en sterrenkunde jaar 2\project natuur en sterrenkunde 2\ECPC\LDA---sammetje\csv_parameters'
@@ -97,66 +106,137 @@ def df_read(meting_nummer, promille):
     return amplitude, mu, sigma
 
 prom_15 = [
-    df_read(1, 15)[1], 
-    [-9 + i for i in range(len(df_read(1, 15)[1]))]
+    df_read(1, 15)[1], # freq
+    [-9 + i for i in range(len(df_read(1, 15)[1]))], # r
+    df_read(1, "15")[2], # sigma
 ]
 
 prom_25_2 = [
-    df_read(2, "25")[1], 
-    [-9 + i for i in range(len(df_read(2, "25")[1]))]
+    df_read(2, "25")[1], # freq
+    [-9 + i for i in range(len(df_read(2, "25")[1]))], # r
+    df_read(2, "25")[2] # sigma
 ]
 
 datasets = {
-    "Prom 1.5% PEO": prom_15,
-    "Prom 2.5% PEO": prom_25_2
+    "1.5%. PEO": prom_15,
+    "2.5%. PEO": prom_25_2
 }
 
 colors = {
-    "Prom 1.5% PEO": "black",
-    "Prom 2.5% PEO": "pink"
+    "1.5%. PEO": "black",
+    "2.5%. PEO": "pink"
 }
 
+def fouten_prop(frequentie, sigma):
+    golflengte = 632.8e-6  # Wavelength of the laser (in mm)
+    hoek = 4.618 * np.pi / 180  # Convert angle to radians
+    fout_hoek = 0.219 * np.pi / 180  # Convert angle uncertainty to radians
+    form = (
+        ((-golflengte * frequentie * fout_hoek) / (2 * (np.cos(hoek) ** 2))) ** 2
+        + ((golflengte * sigma) / (2 * np.sin(hoek))) ** 2
+    )
+    return np.sqrt(form)
 
-# Quadratic function definition
-def snelheid_functie(x, a, b, x0):
+def quadratisch_functie(x, a, b, x0):
     return a * (x - x0) ** 2 + b
 
-# Function to process, fit, shift peaks, and plot
-def process_and_fit_shifted(dataset, label, color):
+def gauss(x, H, A, x0, sigma): 
+    return H + A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
+
+def v_functie(frequentie):
+    form = (632.8e-6 * frequentie) / (2 * np.sin(4.618 * np.pi / 180))
+    return form
+
+def process_and_fit_with_residuals(dataset, label, color, fit_functie, ax_fit, ax_residual):
     metingen = dataset[0]
-    r = dataset[1]
-
+    r = [val * 1.33 for val in dataset[1]]
+    fout_lijst = []
+    snelheid = []
+    
+    if len(dataset) > 2:
+        sigma_csv = dataset[2]  
+        for pos in range(len(metingen)):
+            fout_lijst.append(fouten_prop(metingen[pos], sigma_csv[pos]))
+            snelheid.append(v_functie(metingen[pos]))
+    else:
+        sigma_csv = None
+        for pos in range(len(metingen)):
+            snelheid.append(v_functie(metingen[pos]))
     # Fit the model
-    model = models.Model(snelheid_functie)
-    result = model.fit(metingen, x=r, a=0, b=np.mean(metingen), x0=0)
-
-    # Extract fitting parameters
-    a = result.params['a'].value
-    b = result.params['b'].value
-    x0 = result.params['x0'].value
-
+    model = models.Model(fit_functie)
+    if fit_functie == quadratisch_functie:
+        result = model.fit(snelheid, x=r, a=0, b=np.mean(snelheid), x0=0)
+        a = result.params['a'].value
+        b = result.params['b'].value
+        x0 = result.params['x0'].value
+    
+    if fit_functie == gauss:
+        result = model.fit(snelheid, x=r, H=np.mean(snelheid), A=1, x0=0, sigma=100)
+        H = result.params['H'].value
+        A = result.params['A'].value
+        x0 = result.params['x0'].value
+        sigma = result.params['sigma'].value
+    
     # Calculate the shift to align the peak (x0) to zero
     shift = -x0
     r_shifted = [val + shift for val in r]
-
+    
     # Generate the shifted fit
     r_fine_shifted = np.linspace(min(r_shifted), max(r_shifted), 200)
-    y_fit_shifted = snelheid_functie(r_fine_shifted, a, b, 0)  # x0 is zero after shifting
+    if fit_functie == quadratisch_functie:
+        y_fit_shifted = fit_functie(r_fine_shifted, a, b, 0)
+    if fit_functie == gauss:
+        y_fit_shifted = fit_functie(r_fine_shifted, H, A, 0, sigma)
+    
+    if sigma_csv is not None:
+        ax_fit.errorbar(r_shifted, snelheid, yerr=fout_lijst, fmt='o', label=f"{label} Meting", color=color, alpha=0.6)
+    else:
+        ax_fit.plot(r_shifted, snelheid, 'o', label=f"{label} Meting", color=color, alpha=0.6)
 
-    # Plot shifted data and fit
-    plt.plot(r_shifted, metingen, 'o', label=f"{label} Data (Shifted)", color=color, alpha=0.6)
-    plt.plot(r_fine_shifted, y_fit_shifted, '-', label=f"{label} Fit (Shifted)", color=color)
 
-# Main execution for shifting and plotting
-plt.figure(figsize=(12, 8))
-for label, dataset in datasets.items():
-    process_and_fit_shifted(dataset, label, colors[label])
+    ax_fit.plot(r_fine_shifted, y_fit_shifted, '-', label=f"{label} Fit", color=color)
+    
+    # Calculate residuals
+    residuals = snelheid - result.eval(x=r)
+    ax_residual.plot(r_shifted, residuals, 'o', label=f"{label} Residuals", color=color)
+    ax_residual.axhline(0, color='black', linestyle='--', linewidth=1, alpha=0.7)
+    ax_residual.set_xlabel("Afstand (mm)")
+    ax_residual.set_ylabel("Snelheid (mm/s)")
 
-plt.xlabel('r (shifted)')
-plt.ylabel('metingen')
-plt.title('Quadratic Fits with Peaks Aligned at r=0')
-plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
-plt.grid()
-plt.tight_layout()
-plt.show()
+def plot_combined(datasets_, colors, functie):
+    num_datasets = len(datasets_)
+    num_cols = 2  # Divide residuals across two columns
+    num_rows = (num_datasets + 1) // 2  # Calculate required rows for residuals
 
+    # Create a figure and a GridSpec layout
+    fig = plt.figure(figsize=(19, 2 * num_rows))  # Adjusted figure size for better spacing
+    gs = GridSpec(num_rows, num_cols + 3, figure=fig)  # Grid with extra columns for space adjustments
+
+    # Create the shared axis for fits
+    ax_fit = fig.add_subplot(gs[:, :2])  # First subplot spans two columns
+    ax_fit.set_xlabel('Afstand verwijderd van midden buis (mm)')
+    ax_fit.set_ylabel('Snelheid water (mm/s)')
+    ax_fit.grid()
+
+    # Create residual axes
+    residual_axes = []
+    for i in range(num_datasets):
+        col = i % num_cols + 3  # Start residual plots from the third column
+        row = i // num_cols
+        ax_residual = fig.add_subplot(gs[row, col])  # Adjust for residuals in individual subplots
+        residual_axes.append(ax_residual)
+
+    # Plot data and fits
+    for i, (label, dataset) in enumerate(datasets_.items()):
+        process_and_fit_with_residuals(dataset, label, colors[label], functie, ax_fit, residual_axes[i])
+
+    # Add legends to the fits subplot
+    ax_fit.legend(loc='upper left', bbox_to_anchor=(1, 1))
+
+    # Tighten layout for better spacing
+    plt.tight_layout()
+    plt.show()
+
+
+# Plot both datasets with residuals
+plot_combined(datasets, colors, quadratisch_functie)

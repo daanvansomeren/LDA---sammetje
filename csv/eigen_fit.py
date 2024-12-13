@@ -25,9 +25,8 @@ def replace_chars_in_csv(input_file, output_file):
         outfile.write(modified_content)
 
 def make_csv(dagdeel, promille):
-    directory = r'C:\documenten computer\huiswerkcomputer\Natuur en sterrenkunde jaar 2\project natuur en sterrenkunde 2\ECPC\LDA---sammetje\csv'
-    output_directory = r'C:\documenten computer\huiswerkcomputer\Natuur en sterrenkunde jaar 2\project natuur en sterrenkunde 2\ECPC\LDA---sammetje\output'
-
+    directory = r'C:\Users\daanv\Documents\UVA\LDA - sammetje\csv'
+    output_directory = r'C:\Users\daanv\Documents\UVA\LDA - sammetje\output'
     file_pattern = os.path.join(directory, '*.csv')
     
     # Get the list of matching files
@@ -49,8 +48,8 @@ def make_csv(dagdeel, promille):
             fit(output_file, f"{dagdeel}meting{meting}_{promille}.csv")
         else:
             print(f"File not found: {input_file}")
-    os.makedirs(r'C:\documenten computer\huiswerkcomputer\Natuur en sterrenkunde jaar 2\project natuur en sterrenkunde 2\ECPC\LDA---sammetje\csv_parameters', exist_ok=True)  
-    fit_parameters_dataframe.to_csv(r'C:\documenten computer\huiswerkcomputer\Natuur en sterrenkunde jaar 2\project natuur en sterrenkunde 2\ECPC\LDA---sammetje\csv_parameters/1para_15.csv')
+    os.makedirs(r'C:\Users\daanv\Documents\UVA\LDA - sammetje\csv_parameters', exist_ok=True)  
+    fit_parameters_dataframe.to_csv(r'C:\Users\daanv\Documents\UVA\LDA - sammetje\csv_parameters/2para_25.csv')
 
 def gaussische_functie(x, A, mu, sigma):
     return A * np.exp(-((x - mu)**2) / (2 * sigma**2))
