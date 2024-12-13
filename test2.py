@@ -56,9 +56,15 @@ prom_01 = [
 ]
 
 prom_15 = [
-    [908.66, 1319.18, 1782.99, 2214.4, 2468.01],
-    [-9, -8.5, -8, -7.5, -7]
+    [1301.41, 1712.72, 2145.49, 2554.71, 3294.96, 3920.26, 4220.05, 4505.18, 4806.74, 5094.10, 5251.48, 5304.78, 5335.80, 5228.71, 4844.62, 4332.33, 2501.41, 2441.17, 2258.31, 2035.56, 1815.98, 1606.19],
+    [-8.5, -8, -7.5, -7, -6.5, -5.5, -4.5, -3.5, -2.5, -1.5, -0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6 ,6.5, 7, 7.5, 8 , 8.5]
 ]
+
+prom_25 = [
+    [1004.83, 1200.78, 1546.33, 1965.04, 2302.93, 2890.45, 3989.77, 4442.799, 4737.49, 4957.95, 5099.39, 5107.56, 5085.41, 5022.84, 4798.85, 4507.57, 4103.87, 2708.73],
+    [-7.5, -7, -6.5, -6, -5.5, -4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5]
+]
+print(len(prom_15[0]), len(prom_15[1]))
 
 hand_datasets = {
     "Nulmeting": nulmeting,
@@ -70,6 +76,7 @@ hand_datasets = {
     "Prom 1% PEO (2)": prom_10_2,
     "Prom 1% PEO (3)": prom_10_3,
     "Prom 1.5% PEO": prom_15,
+    "Prom 2.5% PEO": prom_25
 }
 
 hand_colors = {
@@ -82,10 +89,17 @@ hand_colors = {
     "Prom 1% PEO (2)": "yellow",
     "Prom 1% PEO (3)": "cyan",
     "Prom 1.5% PEO": "blue",
+    "Prom 2.5% PEO": "orange",
 }
 
 # HANDMATIGE DATASETS
 
+
+def v_functie(frequentie):
+    # Handle if `frequentie` is a list or array
+    frequentie = np.asarray(frequentie)  # Convert to NumPy array for element-wise operations
+    form = (632.8e-6 * frequentie) / (2 * np.sin(4.618 * np.pi / 180))
+    return form
 
 
 def df_read(meting_nummer, promille):
@@ -166,6 +180,48 @@ plt.grid()
 plt.tight_layout()
 plt.show()
 
+
+# # Function to process, fit, shift peaks, and plot
+# def process_and_fit_shifted(dataset, label, color):
+#     # Convert frequencies to speeds
+#     speeds = v_functie(dataset[0])  # Apply v_functie to frequency array
+#     positions = dataset[1]
+
+#     # Fit the model
+#     model = models.Model(snelheid_functie)
+#     result = model.fit(speeds, x=positions, a=0, b=np.mean(speeds), x0=0)
+
+#     # Extract fitting parameters
+#     a = result.params['a'].value
+#     b = result.params['b'].value
+#     x0 = result.params['x0'].value
+
+#     # Calculate the shift to align the peak (x0) to zero
+#     shift = -x0
+#     r_shifted = [val + shift for val in positions]
+
+#     # Generate the shifted fit
+#     r_fine_shifted = np.linspace(min(r_shifted), max(r_shifted), 200)
+#     y_fit_shifted = snelheid_functie(r_fine_shifted, a, b, 0)  # x0 is zero after shifting
+
+#     # Plot shifted data and fit
+#     plt.plot(r_shifted, speeds, 'o', label=f"{label} Data (Shifted)", color=color, alpha=0.6)
+#     plt.plot(r_fine_shifted, y_fit_shifted, '-', label=f"{label} Fit (Shifted)", color=color)
+
+# # Main execution for shifting and plotting
+# plt.figure(figsize=(12, 8))
+# for label, dataset in hand_datasets.items():
+#     process_and_fit_shifted(dataset, label, hand_colors[label])
+
+# # Customize and show the plot
+# plt.xlabel('r (shifted)')
+# plt.ylabel('Speed (m/s)')
+# plt.title('Quadratic Fits with Peaks Aligned at r=0')
+# plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+# plt.grid()
+# plt.tight_layout()
+# plt.show()
+
 def process_and_fit_shifted_with_errorbars(dataset, label, color):
     metingen = dataset[0]
     r = dataset[1]
@@ -204,7 +260,7 @@ plt.grid()
 plt.tight_layout()
 plt.show()
 
-
+#Add speed graph
 peo_concentration_maxima = []
 
 def process_and_fit_shifted_and_extract_peak(dataset, label, color, concentration):
@@ -248,6 +304,7 @@ hand_datasets_concentrations = {
     "Prom 1% PEO (2)": 1.0,
     "Prom 1% PEO (3)": 1.0,
     "Prom 1.5% PEO": 1.5,
+    "Prom 2.5% PEO": 2.5,
 }
 
 # Main execution for shifting, extracting peak, and plotting
@@ -264,6 +321,7 @@ plt.grid()
 plt.tight_layout()
 plt.show()
 
+#add speed graph
 # Plot the maximum values against PEO concentrations
 peo_concentration_maxima.sort()  # Sort by concentration
 concentrations, maxima = zip(*peo_concentration_maxima)
@@ -275,5 +333,22 @@ plt.ylabel('Peak Value')
 plt.title('Peak Values vs. PEO Concentration')
 plt.grid()
 plt.legend()
+plt.tight_layout()
+plt.show()
+#add speedgraph
+
+# Calculate speed using maxima
+speeds = [v_functie(maximum) for maximum in maxima]
+
+# Plot speed against PEO concentrations
+plt.figure(figsize=(8, 6))
+plt.plot(concentrations, speeds, 'o-', label="Speed vs PEO Concentration", color="blue")
+
+# Add labels and title
+plt.xlabel("PEO Concentration (%)")
+plt.ylabel("Speed (m/s)")
+plt.title("Speed vs PEO Concentration")
+plt.grid()
+plt.legend(loc='best')
 plt.tight_layout()
 plt.show()

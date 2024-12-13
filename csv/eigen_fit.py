@@ -25,8 +25,9 @@ def replace_chars_in_csv(input_file, output_file):
         outfile.write(modified_content)
 
 def make_csv(dagdeel, promille):
-    directory = r'C:\Users\daanv\Documents\UVA\LDA - sammetje\csv'
-    output_directory = r'C:\Users\daanv\Documents\UVA\LDA - sammetje\output'
+    directory = r'C:\documenten computer\huiswerkcomputer\Natuur en sterrenkunde jaar 2\project natuur en sterrenkunde 2\ECPC\LDA---sammetje\csv'
+    output_directory = r'C:\documenten computer\huiswerkcomputer\Natuur en sterrenkunde jaar 2\project natuur en sterrenkunde 2\ECPC\LDA---sammetje\output'
+
     file_pattern = os.path.join(directory, '*.csv')
     
     # Get the list of matching files
@@ -48,9 +49,8 @@ def make_csv(dagdeel, promille):
             fit(output_file, f"{dagdeel}meting{meting}_{promille}.csv")
         else:
             print(f"File not found: {input_file}")
-    os.makedirs(r'C:\Users\daanv\Documents\UVA\LDA - sammetje\csv_parameters', exist_ok=True)  
-    fit_parameters_dataframe.to_csv(r'C:\Users\daanv\Documents\UVA\LDA - sammetje\csv_parameters/2para_25.csv')
-
+    os.makedirs(r'C:\documenten computer\huiswerkcomputer\Natuur en sterrenkunde jaar 2\project natuur en sterrenkunde 2\ECPC\LDA---sammetje\csv_parameters', exist_ok=True)  
+    fit_parameters_dataframe.to_csv(r'C:\documenten computer\huiswerkcomputer\Natuur en sterrenkunde jaar 2\project natuur en sterrenkunde 2\ECPC\LDA---sammetje\csv_parameters/1para_15.csv')
 def gaussische_functie(x, A, mu, sigma):
     return A * np.exp(-((x - mu)**2) / (2 * sigma**2))
 
@@ -68,7 +68,7 @@ def fit(input_file, naam):
     
     # Custom peak amplitude for specific file
     
-    '''if naam == "4meting11_15.csv" or naam == "4meting15_15.csv" or naam == "4meting16_15.csv":
+    if naam == "4meting11_15.csv" or naam == "4meting15_15.csv" or naam == "4meting16_15.csv":
         x = 5000
         y = 100
     elif naam == "4meting17_15.csv" or naam == "4meting18_15.csv":
@@ -77,21 +77,15 @@ def fit(input_file, naam):
     else:
         x = frequentie[np.argmax(amplitude)]
         y = max(amplitude)
-'''
-    
+
+    '''
     if naam == "4meting15_2_25.csv":
-        x = 4769.28
-        y = 200
-    elif naam == "4meting16_2_25.csv":
-        x = 4769.28
-        y = 200
-    elif naam == "4meting17_2_25.csv":
-        x = 4069.28
+        x = 600
         y = 200
     else:
         x = frequentie[np.argmax(amplitude)]
         y = max(amplitude)
-        
+        '''
     print ("x =", x)
     print ("y =", y)
 
